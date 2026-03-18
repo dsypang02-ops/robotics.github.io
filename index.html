@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>雙計時器 · 隊伍A紅/隊伍B藍 · 預設4分鐘</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            user-select: none;
+        }
+        body {
+            background: linear-gradient(145deg, #2d3e4e 0%, #1f2e3a 100%);
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .timer-app {
+            background: #25323e;
+            border-radius: 2.5rem 2.5rem 2rem 2rem;
+            box-shadow: 0 30px 45px rgba(0,0,0,0.7), inset 0 0 0 1px rgba(200,180,130,0.3);
+            padding: 2rem 2rem 1.5rem;
+            width: min(95vw, 760px);
+            border-bottom: 6px solid #b88b4b;
+            display: flex;
+            flex-direction: column;
+            min-height: 650px;
+        }
+        h1 {
+            text-align: center;
+            margin: 0 0 1.2rem 0;
+            font-weight: 400;
+            font-size: 2rem;
+            letter-spacing: 3px;
+            color: #ecdbbd;
+            text-shadow: 0 3px 6px #0f1a24;
+        }
+
+        .main-content {
+            flex: 1 0 auto;
+        }
+
+        .pair-panel {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        .team-card {
+            background: #1e2b36;
+            border-radius: 2.2rem 2.2rem 1.8rem 1.8rem;
+            flex: 1 1 260px;
+            min-width: 250px;
+            box-shadow: inset 0 -5px 0 #121c24, 0 12px 20px #0b141c;
+            padding: 1.5rem 0.8rem 1.2rem;
+            text-align: center;
+            border-top: 3px solid;
+            transition: all 0.1s ease;
+        }
+        .team-card.active-turn {
+            box-shadow: 0 0 0 4px #f5e56b, 0 15px 25px black;
+            transform: scale(1.01);
+            border-top-color: #f5d742;
+        }
+        .team-a {
+            border-top-color: #e15a5a;
+        }
+        .team-b {
+            border-top-color: #5a9fe1;
+        }
+        .team-label {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 0.2rem;
+            color: #ebd8b8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.3rem;
+        }
+        .team-a .team-label { color: #ffb6b6; }
+        .team-b .team-label { color: #b6d6ff; }
+        .time-display {
+            font-family: 'Courier New', 'Fira Code', monospace;
+            font-size: 5rem;
+            font-weight: 700;
+            background: #0f1c24;
+            color: #fde9c9;
+            padding: 0.2rem 0.2rem;
+            border-radius: 1.8rem;
+            margin: 0.3rem 0 0.6rem;
+            box-shadow: inset 0 0 15px #000000, 0 2px 0 #4f626f;
+            letter-spacing: 8px;
+            text-shadow: 0 0 8px #fdb95b;
+            line-height: 1.2;
+        }
+        .limit-control {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.8rem;
+            margin: 0.8rem 0 0.3rem;
+            background: #1e2e3b;
+            padding: 0.4rem 0.8rem;
+            border-radius: 3rem;
+            border: 1px solid #5b7485;
+        }
+        .limit-control label {
+            color: #d2c2ab;
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+        .limit-control input {
+            width: 75px;
+            background: #243b48;
+            border: none;
+            border-bottom: 3px solid #c29a5a;
+            color: #ffdfaa;
+            font-size: 1.6rem;
+            font-weight: 700;
+            text-align: center;
+            padding: 0.2rem 0;
+            border-radius: 2rem 2rem 0 0;
+            outline: none;
+            font-family: 'Courier New', monospace;
+        }
+        .limit-control input:focus {
+            background: #1f3542;
+            border-bottom-color: #f3c26b;
+        }
+        .limit-control span {
+            font-size: 1.3rem;
+            color: #bdafa0;
+        }
+
+        .team-buttons {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            margin: 1rem 0 1.5rem;
+            flex-wrap: wrap;
+        }
+        .btn-team {
+            flex: 1 1 200px;
+            min-width: 210px;
+            border: none;
+            border-bottom: 6px solid #1c2f3a;
+            color: white;
+            font-size: 2rem;
+            font-weight: 700;
+            padding: 1rem 0.5rem;
+            border-radius: 4rem;
+            cursor: pointer;
+            box-shadow: 0 8px 0 #0f1e27, 0 5px 18px black;
+            transition: 0.04s linear;
+            letter-spacing: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .btn-team:active {
+            transform: translateY(5px);
+            border-bottom-width: 2px;
+        }
+        .btn-team-a {
+            background: #b53b3b;
+        }
+        .btn-team-b {
+            background: #3b6fb5;
+        }
+
+        .status-area {
+            background: #1d2c38;
+            border-radius: 3rem;
+            padding: 0.8rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: #dacebc;
+            font-size: 1.5rem;
+            border: 1px solid #60788a;
+            margin: 1rem 0 2rem;
+        }
+        .turn-indicator {
+            background: #314a5a;
+            padding: 0.3rem 1.5rem;
+            border-radius: 3rem;
+            font-weight: 600;
+            color: #ffdb8e;
+        }
+        .alert-sign {
+            color: #ffb9a9;
+            font-weight: 500;
+        }
+
+        .bottom-controls {
+            margin-top: auto;
+            padding-top: 2rem;
+            border-top: 2px dashed #5e7485;
+            display: flex;
+            gap: 3rem;
+            justify-content: center;
+        }
+        .bottom-btn {
+            border: none;
+            border-bottom: 5px solid #293b47;
+            color: white;
+            font-size: 1.6rem;
+            font-weight: 600;
+            padding: 0.8rem 2.5rem;
+            border-radius: 3rem;
+            cursor: pointer;
+            box-shadow: 0 6px 0 #1e2e39;
+            transition: 0.04s linear;
+            min-width: 160px;
+        }
+        .bottom-btn:active {
+            transform: translateY(4px);
+            border-bottom-width: 2px;
+        }
+        .btn-pause-bottom {
+            background: #5f6c7a;
+            border-bottom-color: #3d4b57;
+        }
+        .btn-reset-bottom {
+            background: #8b6f50;
+            border-bottom-color: #5f4a35;
+        }
+
+        .footer-note {
+            text-align: center;
+            color: #7b8b9b;
+            margin-top: 1rem;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+<div class="timer-app">
+    <div class="main-content">
+        <h1>⚡ 隊伍A (紅) · 隊伍B (藍) ⚡</h1>
+
+        <div class="pair-panel">
+            <!-- 隊伍A (紅色) 預設4分鐘 -->
+            <div class="team-card team-a" id="teamACard">
+                <div class="team-label">🔴 隊伍 A</div>
+                <div class="time-display" id="teamATime">04:00</div>
+                <div class="limit-control">
+                    <label for="teamALimitInput">限時</label>
+                    <input type="number" id="teamALimitInput" min="1" max="99" value="4" step="1">
+                    <span>分鐘</span>
+                </div>
+            </div>
+            <!-- 隊伍B (藍色) 預設4分鐘 -->
+            <div class="team-card team-b" id="teamBCard">
+                <div class="team-label">🔵 隊伍 B</div>
+                <div class="time-display" id="teamBTime">04:00</div>
+                <div class="limit-control">
+                    <label for="teamBLimitInput">限時</label>
+                    <input type="number" id="teamBLimitInput" min="1" max="99" value="4" step="1">
+                    <span>分鐘</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="team-buttons">
+            <button class="btn-team btn-team-a" id="btnAToggle">🔴 隊伍A 開始</button>
+            <button class="btn-team btn-team-b" id="btnBToggle">🔵 隊伍B 開始</button>
+        </div>
+
+        <div class="status-area">
+            <span class="turn-indicator" id="turnDisplay">⚪ 等待開始</span>
+            <span class="alert-sign" id="alertMessage">⏱️ 計時正常</span>
+        </div>
+    </div>
+
+    <div class="bottom-controls">
+        <button class="bottom-btn btn-pause-bottom" id="btnPauseAll">⏸️ 全部暫停</button>
+        <button class="bottom-btn btn-reset-bottom" id="btnReset">⟲ 重置所有</button>
+    </div>
+    <div class="footer-note">底部按鈕為全局控制 · 避免比賽中誤觸</div>
+</div>
+
+<script>
+    (function() {
+        // 基礎配置 - 修改預設時間為4分鐘
+        const DEFAULT_MINUTES = 4;
+        const TICK_RATE_MS = 100;
+        const WARNING_BEEP_COUNT = 3;
+        const BEEP_INTERVAL_MS = 320;
+
+        // 兩隊剩餘秒數 (4分鐘 = 240秒)
+        let teamASeconds = DEFAULT_MINUTES * 60;
+        let teamBSeconds = DEFAULT_MINUTES * 60;
+
+        // 當前限時 (分鐘)
+        let teamALimitMin = DEFAULT_MINUTES;
+        let teamBLimitMin = DEFAULT_MINUTES;
+
+        // 目前哪一隊正在計時？ 'teamA', 'teamB' 或 null
+        let activeTurn = null;
+
+        // 是否已發出超時警示
+        let teamAAlerted = false;
+        let teamBAlerted = false;
+
+        // 定時器 handle
+        let timerInterval = null;
+
+        // 音效相關
+        let audioCtx = null;
+        let audioEnabled = false;
+
+        // DOM 元素
+        const teamATimeDiv = document.getElementById('teamATime');
+        const teamBTimeDiv = document.getElementById('teamBTime');
+        const teamACard = document.getElementById('teamACard');
+        const teamBCard = document.getElementById('teamBCard');
+        const turnDisplay = document.getElementById('turnDisplay');
+        const alertMessageSpan = document.getElementById('alertMessage');
+
+        const teamALimitInput = document.getElementById('teamALimitInput');
+        const teamBLimitInput = document.getElementById('teamBLimitInput');
+        const btnAToggle = document.getElementById('btnAToggle');
+        const btnBToggle = document.getElementById('btnBToggle');
+        const btnPauseAll = document.getElementById('btnPauseAll');
+        const btnReset = document.getElementById('btnReset');
+
+        // ---------- 輔助函數 ----------
+        function formatTime(secondsTotal) {
+            if (secondsTotal < 0) secondsTotal = 0;
+            const mins = Math.floor(secondsTotal / 60);
+            const secs = Math.floor(secondsTotal % 60);
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function updateDisplay() {
+            teamATimeDiv.textContent = formatTime(teamASeconds);
+            teamBTimeDiv.textContent = formatTime(teamBSeconds);
+        }
+
+        // 更新活躍外框及按鈕文字
+        function updateActiveUI() {
+            teamACard.classList.remove('active-turn');
+            teamBCard.classList.remove('active-turn');
+            if (activeTurn === 'teamA') {
+                teamACard.classList.add('active-turn');
+                turnDisplay.innerHTML = '🔴 隊伍A 作賽中';
+                btnAToggle.innerHTML = '🔴 隊伍A 暫停';
+                btnBToggle.innerHTML = '🔵 隊伍B 開始';
+            } else if (activeTurn === 'teamB') {
+                teamBCard.classList.add('active-turn');
+                turnDisplay.innerHTML = '🔵 隊伍B 作賽中';
+                btnAToggle.innerHTML = '🔴 隊伍A 開始';
+                btnBToggle.innerHTML = '🔵 隊伍B 暫停';
+            } else {
+                turnDisplay.innerHTML = '⏸️ 暫停 (無回合進行)';
+                btnAToggle.innerHTML = '🔴 隊伍A 開始';
+                btnBToggle.innerHTML = '🔵 隊伍B 開始';
+            }
+        }
+
+        // 檢查超時及響鬧
+        function checkAndAlert() {
+            let updated = false;
+            if (teamASeconds <= 0 && !teamAAlerted) {
+                teamAAlerted = true;
+                triggerBeeps(WARNING_BEEP_COUNT);
+                alertMessageSpan.innerHTML = '⚠️ 隊伍A 超時！';
+                if (activeTurn === 'teamA') {
+                    pauseTimer();
+                }
+                updated = true;
+            }
+            if (teamBSeconds <= 0 && !teamBAlerted) {
+                teamBAlerted = true;
+                triggerBeeps(WARNING_BEEP_COUNT);
+                alertMessageSpan.innerHTML = '⚠️ 隊伍B 超時！';
+                if (activeTurn === 'teamB') {
+                    pauseTimer();
+                }
+                updated = true;
+            }
+
+            if (!updated) {
+                if (teamASeconds <= 0 || teamBSeconds <= 0) {
+                    if (teamASeconds <= 0) alertMessageSpan.innerHTML = '⚠️ 隊伍A 超時！';
+                    else if (teamBSeconds <= 0) alertMessageSpan.innerHTML = '⚠️ 隊伍B 超時！';
+                } else {
+                    alertMessageSpan.innerHTML = '⏱️ 計時正常';
+                }
+            }
+            if (teamASeconds <= 0 && teamBSeconds <= 0) {
+                alertMessageSpan.innerHTML = '⚠️ 兩隊均已超時';
+            }
+        }
+
+        // ---------- 音效 ----------
+        function initAudio() {
+            if (audioCtx) return;
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                audioEnabled = true;
+            } catch (e) {
+                audioEnabled = false;
+            }
+        }
+
+        function beep() {
+            if (!audioEnabled || !audioCtx) return;
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume().then(() => playBeep()).catch(() => {});
+            } else {
+                playBeep();
+            }
+        }
+
+        function playBeep() {
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = 880;
+            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+            osc.connect(gain).connect(audioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 0.15);
+        }
+
+        function triggerBeeps(count) {
+            initAudio();
+            for (let i = 0; i < count; i++) {
+                setTimeout(() => beep(), i * BEEP_INTERVAL_MS);
+            }
+        }
+
+        // ---------- 計時器核心 ----------
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                if (activeTurn === 'teamA') {
+                    teamASeconds = Math.max(teamASeconds - 0.1, -0.01);
+                    if (teamASeconds < 0) teamASeconds = -0.001;
+                } else if (activeTurn === 'teamB') {
+                    teamBSeconds = Math.max(teamBSeconds - 0.1, -0.01);
+                    if (teamBSeconds < 0) teamBSeconds = -0.001;
+                } else {
+                    return;
+                }
+
+                updateDisplay();
+                checkAndAlert();
+            }, TICK_RATE_MS);
+        }
+
+        function pauseTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            activeTurn = null;
+            updateActiveUI();
+        }
+
+        // 切換隊伍：同鍵開始/暫停
+        function toggleTeam(team) {
+            initAudio();  // 用戶手勢啟用音頻
+
+            // 超時鎖
+            if (team === 'teamA' && teamASeconds <= 0) {
+                alertMessageSpan.innerHTML = '⛔ 隊伍A已超時，無法開始';
+                triggerBeeps(1);
+                return;
+            }
+            if (team === 'teamB' && teamBSeconds <= 0) {
+                alertMessageSpan.innerHTML = '⛔ 隊伍B已超時，無法開始';
+                triggerBeeps(1);
+                return;
+            }
+
+            // 如果按的隊伍就是目前活躍隊伍 → 暫停
+            if (activeTurn === team) {
+                pauseTimer();
+                return;
+            }
+
+            // 否則切換到該隊
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+
+            activeTurn = team;
+            if (team === 'teamA' && teamASeconds > 0) teamAAlerted = false;
+            if (team === 'teamB' && teamBSeconds > 0) teamBAlerted = false;
+
+            updateActiveUI();
+            startTimer();
+            checkAndAlert();
+        }
+
+        // 全部暫停
+        function pauseAll() {
+            pauseTimer();
+            updateActiveUI();
+            checkAndAlert();
+        }
+
+        // 重置所有：依據輸入欄位數值
+        function resetAll() {
+            pauseAll();
+
+            let newLimitA = parseFloat(teamALimitInput.value);
+            let newLimitB = parseFloat(teamBLimitInput.value);
+            if (isNaN(newLimitA) || newLimitA < 1) newLimitA = 1;
+            if (isNaN(newLimitB) || newLimitB < 1) newLimitB = 1;
+            newLimitA = Math.min(99, newLimitA);
+            newLimitB = Math.min(99, newLimitB);
+
+            teamALimitMin = newLimitA;
+            teamBLimitMin = newLimitB;
+            teamASeconds = teamALimitMin * 60;
+            teamBSeconds = teamBLimitMin * 60;
+            teamAAlerted = false;
+            teamBAlerted = false;
+
+            teamALimitInput.value = teamALimitMin;
+            teamBLimitInput.value = teamBLimitMin;
+
+            updateDisplay();
+            alertMessageSpan.innerHTML = '⏱️ 計時正常';
+            updateActiveUI();
+        }
+
+        // 啟用音頻手勢 (任意按鈕首次點擊)
+        function enableAudioOnce() {
+            initAudio();
+            document.querySelectorAll('button').forEach(btn => {
+                btn.removeEventListener('click', enableAudioOnce);
+            });
+        }
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', enableAudioOnce, { once: true });
+        });
+
+        // ---------- 綁定事件 ----------
+        btnAToggle.addEventListener('click', () => toggleTeam('teamA'));
+        btnBToggle.addEventListener('click', () => toggleTeam('teamB'));
+        btnPauseAll.addEventListener('click', pauseAll);
+        btnReset.addEventListener('click', resetAll);
+
+        // 限制輸入範圍
+        teamALimitInput.addEventListener('change', function() {
+            let val = parseInt(this.value);
+            if (isNaN(val) || val < 1) val = 1;
+            if (val > 99) val = 99;
+            this.value = val;
+        });
+        teamBLimitInput.addEventListener('change', function() {
+            let val = parseInt(this.value);
+            if (isNaN(val) || val < 1) val = 1;
+            if (val > 99) val = 99;
+            this.value = val;
+        });
+
+        // 初始顯示
+        updateDisplay();
+        updateActiveUI();
+    })();
+</script>
+</body>
+</html>
